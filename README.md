@@ -1,3 +1,37 @@
+# General information
+
+This fork of Photon File Validator adds support for Prusa SL1 file format.
+
+In addition, a PrintHost is implemented, so that files can be transferred from PrusaSlicer with one click, without detour via file system.
+
+## Warning / Disclaimer
+
+This is a beta software. USE AT YOUR OWN RISK. I am not liable for any damage that may occur to your printer. 
+
+## Installation
+
+Currently no installers are offered. You need an installed Java-Runtime to run the program. Download the [JAR File](https://github.com/3ddc-solaris/PhotonFileValidator/raw/master/out/artifacts/PhotonFileValidator.jar) and execute it from the command line with **java -jar PhotonFileValidator.jar**.
+
+## Usage
+
+Start the program.
+
+![Start screen](https://github.com/3ddc-solaris/PhotonFileValidator/blob/master/doc/psl1_main.png)
+
+Click on the "Settings" button.
+
+![Settings screen](https://github.com/3ddc-solaris/PhotonFileValidator/blob/master/doc/psl1_settings.png)
+
+Make sure that under "Print Host Settings / Current State" a "Print Host is Running" is displayed. If a problem occurs, change the port and restart the Print Host.
+
+Under "Print Host Settings / Output directory" select the directory where the generated .photon files will be stored.
+
+Click on the button "Show PrusaSlicer settings" and follow the instructions to set up PrusaSlicer.
+
+![Instructions screen](https://github.com/3ddc-solaris/PhotonFileValidator/blob/master/doc/psl1_instructions.png)
+
+------------------
+
 # Photon File Viewer
 A file viewer application for AnyCubic Photon sliced files (*.photon and *.cbddlp). The viewer can show you preview images, print information and all layers with information on overhang and islands issues, and edit layers manually or automatically.
 
