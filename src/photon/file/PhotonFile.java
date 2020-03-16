@@ -23,7 +23,6 @@
  */
 
 package photon.file;
-
 import photon.file.parts.*;
 import photon.file.parts.photon.PhotonFileHeader;
 import photon.file.parts.photons.PhotonsFileHeader;
@@ -31,6 +30,10 @@ import photon.file.parts.photons.PhotonsFileHeader;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+
+import photon.application.extensions.prusasl1.file.PrusaSL1File;
+import photon.application.extensions.prusasl1.file.utilites.DepthBuffer;
+import photon.application.extensions.prusasl1.file.utilites.RenderedImage;
 
 /**
  * by bn on 30/06/2018.
@@ -53,7 +56,41 @@ public class PhotonFile {
         if (file.getName().toLowerCase().endsWith(".photons")) {
             return readPhotonsFile(getBinaryData(file), iPhotonProgress);
         }
-        return readFile(getBinaryData(file), iPhotonProgress);
+        else if (file.getName().toLowerCase().endsWith(".sl1")) {
+            return readPrusaSL1File(file, iPhotonProgress);
+        }
+        return readPhotonFile(getBinaryData(file), iPhotonProgress);
+    }
+
+    public PhotonFile readPrusaSL1File(File file, IPhotonProgress iPhotonProgress) throws Exception {
+        iPhotonProgress.showInfo("Opening Prusa SL1 file...");
+
+        try( final PrusaSL1File prusaSL1File = new PrusaSL1File(file) )  {
+            iPhotonProgress.showInfo("Reading Prusa SL1 file header information...");
+            final PhotonFileHeader photonFileHeader = new PhotonFileHeader(prusaSL1File.getHeader());
+            iFileHeader = photonFileHeader;
+
+            if (photonFileHeader.getVersion() > 1) {
+                iPhotonProgress.showInfo("Reading Print parameters information...");
+                photonFileHeader.readParameters(prusaSL1File);
+            }
+
+            iPhotonProgress.showInfo("Reading Prusa SL1 layers information...");
+            final DepthBuffer depthBuffer = new DepthBuffer(photonFileHeader.getNumberOfLayers(), photonFileHeader.getResolutionY());
+            layers = PhotonFileLayer.readLayers(photonFileHeader, prusaSL1File.getLayers(), margin, iPhotonProgress, depthBuffer);
+
+            iPhotonProgress.showInfo("Reading preview image information...");
+            final RenderedImage image = new RenderedImage(depthBuffer);
+            previewOne = new PhotonFilePreview(prusaSL1File.getOrCreateLargeThumbnail(image));
+            previewTwo = new PhotonFilePreview(prusaSL1File.getOrCreateSmallThumbnail(image));
+        }
+
+        resetMarginAndIslandInfo();
+
+        // TODO: remove debug
+        System.out.println(iFileHeader);
+
+        return this;
     }
 
     private PhotonFile readPhotonsFile(byte[] file, IPhotonProgress iPhotonProgress) throws Exception {
@@ -67,7 +104,7 @@ public class PhotonFile {
         return this;
     }
 
-    private PhotonFile readFile(byte[] file, IPhotonProgress iPhotonProgress) throws Exception {
+    private PhotonFile readPhotonFile(byte[] file, IPhotonProgress iPhotonProgress) throws Exception {
         iPhotonProgress.showInfo("Reading Photon file header information...");
         PhotonFileHeader photonFileHeader = new PhotonFileHeader(file);
         iFileHeader = photonFileHeader;

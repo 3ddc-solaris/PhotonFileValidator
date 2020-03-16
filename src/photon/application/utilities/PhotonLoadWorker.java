@@ -25,6 +25,10 @@
 package photon.application.utilities;
 
 import photon.application.MainForm;
+import photon.application.base.BaseFrame;
+import photon.application.extensions.prusasl1.configuration.PrusaSL1Configuration;
+import photon.application.extensions.prusasl1.printhost.PrusaSL1Server;
+import photon.application.extensions.prusasl1.printhost.utilites.PrintHostTemporaryFile;
 import photon.file.PhotonFile;
 import photon.file.parts.IPhotonProgress;
 
@@ -46,9 +50,12 @@ public class PhotonLoadWorker extends SwingWorker<Integer, String> implements IP
         mainForm.layerInfo.setForeground(Color.decode("#000099"));
         mainForm.marginInfo.setText("");
 
+        PrusaSL1Server.getInstance().setEnabled(false);
+
         mainForm.openBtn.setEnabled(false);
         mainForm.saveBtn.setEnabled(false);
         mainForm.fixBtn.setEnabled(false);
+        mainForm.settingsBtn.setEnabled(false);
         mainForm.islandNextBtn.setEnabled(false);
         mainForm.islandPrevBtn.setEnabled(false);
         mainForm.marginNextBtn.setEnabled(false);
@@ -60,6 +67,13 @@ public class PhotonLoadWorker extends SwingWorker<Integer, String> implements IP
         mainForm.tabPreviewSmall.setEnabled(false);
         mainForm.playButton.setEnabled(false);
         mainForm.convertBtn.setEnabled(false);
+
+        if(file instanceof PrintHostTemporaryFile && PrusaSL1Configuration.getInstance().isBringWindowToFgOnImport()) {
+            try {
+                ((BaseFrame)mainForm.frame).bringToFront();
+            }
+            catch (final Exception e) {}
+        }
     }
 
     @Override
@@ -71,9 +85,11 @@ public class PhotonLoadWorker extends SwingWorker<Integer, String> implements IP
 
     @Override
     protected void done() {
-        // mainForm.openBtn.setEnabled(true);
+        mainForm.openBtn.setEnabled(true);
+        mainForm.settingsBtn.setEnabled(true);
+        PrusaSL1Server.getInstance().setEnabled(true);
+
         if (mainForm.photonFile!=null) {
-            mainForm.openBtn.setEnabled(true);
             mainForm.saveBtn.setEnabled(true);
             mainForm.informationBtn.setEnabled(true);
             mainForm.tabPreviewLarge.setEnabled(true);
@@ -96,9 +112,10 @@ public class PhotonLoadWorker extends SwingWorker<Integer, String> implements IP
             mainForm.photonFile.readFile(file, this);
             publish("Complete...");
         } catch (Exception e) {
+            e.printStackTrace();
             mainForm.photonFile = null;
             mainForm.marginInfo.setForeground(Color.red);
-            mainForm.marginInfo.setText("Could not read the file, file is corrupted or in an unsupported format.");
+            mainForm.marginInfo.setText("Could not read the file, file is corrupted or in an unsupported format. " + e.getMessage());
             return 0;
         }
         return 1;

@@ -29,6 +29,17 @@ import photon.file.parts.photon.PhotonFileHeader;
 import java.io.ByteArrayInputStream;
 import java.util.*;
 
+import photon.application.extensions.prusasl1.file.utilites.DepthBuffer;
+import photon.application.extensions.prusasl1.file.parts.PrusaSL1FileLayer;
+
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.io.ByteArrayOutputStream;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * by bn on 01/07/2018.
  */
@@ -56,6 +67,23 @@ public class PhotonFileLayer {
     private boolean extendsMargin;
     private PhotonFileHeader photonFileHeader;
     public boolean isCalculated;
+
+    private PhotonFileLayer(PhotonFileHeader photonFileHeader, int layerNum, byte[] imageData) {
+        layerPositionZ = layerNum * photonFileHeader.getLayerHeight();
+        layerExposure = layerNum <= photonFileHeader.getBottomLayers() ? photonFileHeader.getBottomExposureTimeSeconds() : photonFileHeader.getExposureTimeSeconds();
+        layerOffTimeSeconds = photonFileHeader.getOffTimeSeconds();
+
+        dataAddress = 0;
+        dataSize = imageData.length;
+
+        unknown1 = 0;
+        unknown2 = 0;
+        unknown3 = 0;
+        unknown4 = 0;
+
+        this.photonFileHeader = photonFileHeader;
+        this.imageData = imageData;
+    }
 
     private PhotonFileLayer(PhotonInputStream ds) throws Exception {
         layerPositionZ = ds.readFloat();
@@ -169,11 +197,11 @@ public class PhotonFileLayer {
         for (int y = 0; y < unpackedImage.size(); y++) {
             BitSet currentRow = unpackedImage.get(y);
             if (currentRow != null) {
-            	int x = 0;
-            	while ((x = currentRow.nextSetBit(x)) >= 0) {
-            		photonLayer.supported(x, y);
-            		++x;
-            	}
+                int x = 0;
+                while ((x = currentRow.nextSetBit(x)) >= 0) {
+                    photonLayer.supported(x, y);
+                    ++x;
+                }
             }
         }
     }
@@ -188,15 +216,15 @@ public class PhotonFileLayer {
             BitSet currentRow = unpackedImage.get(y);
             BitSet prevRow = previousUnpackedImage != null ? previousUnpackedImage.get(y) : null;
             if (currentRow != null) {
-            	int x = 0;
-            	while ((x = currentRow.nextSetBit(x)) >= 0) {
+                int x = 0;
+                while ((x = currentRow.nextSetBit(x)) >= 0) {
                     if (prevRow == null || prevRow.get(x)) {
                         photonLayer.supported(x, y);
                     } else {
                         photonLayer.island(x, y);
                     }
                     ++x;
-            	}
+                }
             }
         }
 
@@ -205,6 +233,111 @@ public class PhotonFileLayer {
         isLandsCount = photonLayer.setIslands(islandRows);
     }
 
+    public static List<PhotonFileLayer> readLayers(PhotonFileHeader photonFileHeader, final PrusaSL1FileLayer[] sl1Layers, final int margin, final IPhotonProgress iPhotonProgress, final DepthBuffer depthBuffer) throws Exception {
+        // read layers
+        //final long[] pcheck = new long[256];
+        final List<Callable<PhotonFileLayer>> callables = new ArrayList<>();
+        final AtomicInteger layerDisplay = new AtomicInteger();
+        for(final PrusaSL1FileLayer layer : sl1Layers) {
+            callables.add( () -> {
+                iPhotonProgress.showInfo("Reading Prusa SL1 file layer " + layerDisplay.incrementAndGet() + "/" + photonFileHeader.getNumberOfLayers());
+
+                // read image
+                final BufferedImage image = layer.getImage();
+                final int width = image.getWidth();
+                final int height = image.getHeight();
+
+                if (width != photonFileHeader.getResolutionX() || height != photonFileHeader.getResolutionY())
+                    throw new IllegalArgumentException("Wrong image size: found " + width + "x" + height + ", expected " + photonFileHeader.getResolutionX() + "x" + photonFileHeader.getResolutionY());
+
+                // get raw image data
+                final byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+                if (width * height != pixels.length)
+                    throw new IllegalArgumentException("Wrong number of pixels: found " + pixels.length + ", expected " + width * height + " (" + width + "x" + height + ")");
+
+                // calculate layer image data
+                // see also https://github.com/fookatchu/pyphotonfile/blob/master/pyphotonfile/photonfile.py
+                // Encoding scheme:
+                //     Highest bit of each byte is color (black or white)
+                //     Lowest 7 bits of each byte is repetition of that color, with max of 125 / 0x7D
+                final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+                // we need to process png bytes from last to first OR perform 180 degree rotation on input image
+                byte color = pixels[pixels.length - 1];
+                byte count = 0;
+                //for(int y = 0; y < height; y++) {
+                for (int y = height - 1; y >= 0; y--) {
+                    int depth = DepthBuffer.EMPTY;
+
+                    //for(int x = 0; x < width; x++) {
+                    for (int x = width - 1; x >= 0; x--) {
+                        final int inPos = width * y + x;
+                        final byte pixel = pixels[inPos];
+                        //pcheck[ ((int)pixel) & 0xFF ]++;
+
+                        // depth to front plane
+                        //if(DepthBuffer.EMPTY == depth && (0 != (color & 0b10000000)))
+                        //    depth = x;
+
+                        // depth to back plane
+                        if (0 != (color & 0b10000000))
+                            depth = x;
+
+                        if (pixel == color) {
+                            if (count < 125) {
+                                count++;
+                                continue;
+                            }
+                        }
+                        final byte outByte = (byte) ((color & 0b10000000) | (count & 0b01111111));
+                        color = pixel;
+                        count = 1;
+
+                        out.write(outByte);
+                    }
+
+                    // depth to front plane
+                    // depthBuffer.setDepth(layerNum, y, depth);
+
+                    // depth to back plane
+                    depthBuffer.setDepth(layer.getIndex(), y, DepthBuffer.EMPTY == depth ? DepthBuffer.EMPTY : (width - 1) - depth);
+                }
+
+                return new PhotonFileLayer(photonFileHeader, layer.getIndex(), out.toByteArray());
+            });
+        }
+
+        final List<PhotonFileLayer> layers = new ArrayList<>();
+        final ExecutorService executor = Executors.newWorkStealingPool();
+
+        executor.invokeAll(callables)
+            .stream()
+            .map(future -> {
+                try {
+                    return future.get();
+                }
+                catch (final Exception e) {
+                    throw new IllegalStateException(e);
+                }
+            })
+            .forEach(layers::add);
+
+        executor.shutdown();
+
+        /*
+        System.out.println("-------- COLOR DISTRIBUTION -----");
+        for(int i = 0; i < pcheck.length; i++) {
+            System.out.println(i + " = " + pcheck[i]);
+        }
+        System.out.println("---------------------------------");
+         */
+
+       // TODO: read antialias layers
+
+        System.gc();
+
+        return layers;
+    }
 
     public static List<PhotonFileLayer> readLayers(PhotonFileHeader photonFileHeader, byte[] file, int margin, IPhotonProgress iPhotonProgress) throws Exception {
         PhotonLayer photonLayer = new PhotonLayer(photonFileHeader.getResolutionX(), photonFileHeader.getResolutionY());

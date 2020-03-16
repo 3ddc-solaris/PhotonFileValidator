@@ -264,7 +264,7 @@
                   </component>
                 </children>
               </grid>
-              <grid id="f4f19" layout-manager="GridLayoutManager" row-count="1" column-count="6" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+              <grid id="f4f19" layout-manager="GridLayoutManager" row-count="1" column-count="7" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                 <margin top="0" left="0" bottom="0" right="0"/>
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
@@ -290,7 +290,7 @@
                   </component>
                   <hspacer id="b22cf">
                     <constraints>
-                      <grid row="0" column="5" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                      <grid row="0" column="6" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
                   </hspacer>
                   <component id="b0159" class="javax.swing.JButton" binding="saveBtn">
@@ -343,6 +343,18 @@
                     <properties>
                       <enabled value="false"/>
                       <text value="Convert"/>
+                    </properties>
+                  </component>
+                  <component id="8829c" class="javax.swing.JButton" binding="settingsBtn">
+                    <constraints>
+                      <grid row="0" column="5" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                        <minimum-size width="110" height="20"/>
+                        <preferred-size width="110" height="20"/>
+                        <maximum-size width="110" height="20"/>
+                      </grid>
+                    </constraints>
+                    <properties>
+                      <text value="Settings"/>
                     </properties>
                   </component>
                 </children>

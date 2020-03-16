@@ -24,6 +24,8 @@
 
 package photon.file.parts;
 
+import photon.application.extensions.prusasl1.file.parts.PrusaSL1FileHeader;
+
 import java.io.ByteArrayInputStream;
 import java.util.Arrays;
 
@@ -51,6 +53,24 @@ public class PhotonFilePrintParameters {
 
     public PhotonFilePrintParameters(int bottomLayerCount) {
         this.bottomLayerCount = bottomLayerCount;
+    }
+
+    public PhotonFilePrintParameters(final PrusaSL1FileHeader header) throws Exception {
+        bottomLiftDistance = header.getBottomLiftDistance();
+        bottomLiftSpeed = header.getBottomLiftSpeed();
+
+        liftingDistance = header.getLiftingDistance();
+        liftingSpeed = header.getLiftingSpeed();
+        retractSpeed = header.getRetractSpeed();
+
+        volumeMl = header.getUsedMaterialMl();
+        weightG = header.getWeightGr();
+        costDollars = header.getCost();
+
+        bottomLightOffDelay = header.getBottomLightOffDelay();
+        lightOffDelay = header.getLightOffDelay();
+
+        bottomLayerCount = header.getBottomLayers();
     }
 
     public PhotonFilePrintParameters(int parametersPos, byte[] file) throws Exception {

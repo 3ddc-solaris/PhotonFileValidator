@@ -29,10 +29,7 @@ import photon.application.MainForm;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.ArrayList;
 
 /**
@@ -106,7 +103,7 @@ public class MainUtils {
         f.setIconImages(icons);
     }
 
-    public static boolean isPhotonFile(File file) {return file.exists() && file.isFile() && (file.getName().toLowerCase().endsWith("photon") || (file.getName().toLowerCase().endsWith("cbddlp")) || (file.getName().toLowerCase().endsWith("photons")));}
+    public static boolean isPhotonFile(File file) {return file.exists() && file.isFile() && (file.getName().toLowerCase().endsWith("photon") || (file.getName().toLowerCase().endsWith("cbddlp")) || (file.getName().toLowerCase().endsWith("sl1")) );}
 
     private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
 
@@ -128,6 +125,19 @@ public class MainUtils {
                     + Character.digit(s.charAt(i + 1), 16));
         }
         return data;
+    }
+
+    public static byte[] readFully(final InputStream inputStream) throws IOException {
+        final  ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        final byte[] buf = new byte[100000];
+
+        int bytesRead = 0;
+        while( (bytesRead = inputStream.read(buf)) != -1 ){
+            bos.write(buf, 0, bytesRead);
+        }
+
+        bos.close();
+        return bos.toByteArray();
     }
 
     public static byte[] getLogo() {

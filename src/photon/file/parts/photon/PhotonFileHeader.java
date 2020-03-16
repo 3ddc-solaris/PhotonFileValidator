@@ -24,12 +24,22 @@
 
 package photon.file.parts.photon;
 
+import photon.application.extensions.prusasl1.file.PrusaSL1File;
 import photon.file.parts.*;
 import photon.file.ui.Text;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.util.List;
+
+import photon.application.extensions.prusasl1.file.parts.PrusaSL1FileHeader;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.Map;
+
 
 /**
  *  by bn on 30/06/2018.
@@ -121,6 +131,56 @@ public class PhotonFileHeader implements IFileHeader {
         machineInfoOffsetAddress = ds.readInt();
         if (version>1) {
             machineInfoSize = ds.readInt();
+        }
+    }
+
+    public PhotonFileHeader(final PrusaSL1FileHeader prusaHeader) throws IOException {
+        header1 = 318570521;
+        version = prusaHeader.getPhotonFileVersion();
+
+        bedXmm = prusaHeader.getBedSizeX();
+        bedYmm = prusaHeader.getBedSizeY();
+        bedZmm = prusaHeader.getBedSizeZ();
+
+        unknown1 = 0;
+        unknown2 = 0;
+        unknown3 = 0;
+
+        layerHeightMilimeter = prusaHeader.getLayerHeightMilimeter();
+        exposureTimeSeconds = prusaHeader.getExposureTimeSeconds();
+        exposureBottomTimeSeconds = prusaHeader.getExposureBottomTimeSeconds();
+
+        offTimeSeconds = prusaHeader.getExposureOffTime();
+        bottomLayers = prusaHeader.getBottomLayers();
+
+        resolutionX = prusaHeader.getResolutionX();
+        resolutionY = prusaHeader.getResolutionY();
+
+        previewOneOffsetAddress = 0;
+        layersDefinitionOffsetAddress = 0;
+
+        numberOfLayers = prusaHeader.getNumberOfLayers();
+
+        previewTwoOffsetAddress = 0;
+        printTimeSeconds = prusaHeader.getPrintTimeSeconds();
+
+        projectType = PhotonProjectType.lcdMirror;
+
+        printParametersOffsetAddress = 0;
+        printParametersSize = 0;
+        antiAliasingLevel = 0;
+
+        lightPWM = 0;
+        bottomLightPWM = 0;
+
+        unknown4 = 0;
+        machineInfoOffsetAddress = 0;
+        machineInfoSize = 0;
+
+        if(version > 1) {
+            antiAliasingLevel = 1;
+            lightPWM = 255;
+            bottomLightPWM = 255;
         }
     }
 
@@ -273,13 +333,13 @@ public class PhotonFileHeader implements IFileHeader {
     }
 
     public int getMachineInfoOffsetAddress() {
-    	return machineInfoOffsetAddress;
+        return machineInfoOffsetAddress;
     }
-    
+
     public int getMachineInfoSize() {
-    	return machineInfoSize;
+        return machineInfoSize;
     }
-    
+
     public int getAntiAliasingLevel() {
         return antiAliasingLevel;
     }
@@ -303,6 +363,57 @@ public class PhotonFileHeader implements IFileHeader {
                 ", O: " + Text.formatSeconds(offTimeSeconds) +
                 ", BE: " + Text.formatSeconds(exposureBottomTimeSeconds) +
                 String.format(", BL: %d", bottomLayers);
+    }
+
+    @Override
+    public String toString() {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (final PrintStream ps = new PrintStream(baos, true)) {
+            ps.println("---------------- PhotonFileHeader BEGIN ----------------");
+            ps.println("header1 = " + header1);
+            ps.println("version = " + version);
+
+            ps.println("bedXmm = " + bedXmm);
+            ps.println("bedYmm = " + bedYmm);
+            ps.println("bedZmm = " + bedZmm);
+
+            ps.println("unknown1 = " + unknown1);
+            ps.println("unknown2 = " + unknown2);
+            ps.println("unknown3 = " + unknown3);
+
+            ps.println("layerHeightMilimeter = " + layerHeightMilimeter);
+            ps.println("exposureTimeSeconds = " + exposureTimeSeconds);
+            ps.println("exposureBottomTimeSeconds = " + exposureBottomTimeSeconds);
+
+            ps.println("offTimeSeconds = " + offTimeSeconds);
+            ps.println("bottomLayers = " + bottomLayers);
+
+            ps.println("resolutionX = " + resolutionX);
+            ps.println("resolutionY = " + resolutionY);
+
+            ps.println("previewOneOffsetAddress = " + previewOneOffsetAddress);
+            ps.println("layersDefinitionOffsetAddress = " + layersDefinitionOffsetAddress);
+
+            ps.println("numberOfLayers = " + numberOfLayers);
+
+            ps.println("previewTwoOffsetAddress = " + previewTwoOffsetAddress);
+            ps.println("printTimeSeconds = " + printTimeSeconds);
+
+            ps.println("projectType = " + projectType);
+
+            ps.println("printParametersOffsetAddress = " + printParametersOffsetAddress);
+            ps.println("printParametersSize = " + printParametersSize);
+            ps.println("antiAliasingLevel = " + antiAliasingLevel);
+
+            ps.println("lightPWM = " + lightPWM);
+            ps.println("bottomLightPWM = " + bottomLightPWM);
+
+            ps.println("unknown4 = " + unknown4);
+            ps.println("machineInfoOffsetAddress = " + machineInfoOffsetAddress);
+            ps.println("machineInfoSize = " + machineInfoSize);
+            ps.println("---------------- PhotonFileHeader END ----------------");
+        }
+        return baos.toString();
     }
 
     public boolean hasAA() {
@@ -359,5 +470,10 @@ public class PhotonFileHeader implements IFileHeader {
     public void readParameters(byte[] file) throws Exception {
         photonFilePrintParameters = new PhotonFilePrintParameters(getPrintParametersOffsetAddress(), file);
         photonFileMachineInfo = new PhotonFileMachineInfo(getMachineInfoOffsetAddress(), getMachineInfoSize(), file);
+    }
+
+    public void readParameters(final PrusaSL1File prusaSL1File) throws Exception {
+        photonFilePrintParameters = new PhotonFilePrintParameters(prusaSL1File.getHeader());
+        photonFileMachineInfo = new PhotonFileMachineInfo(0, 0, null);
     }
 }

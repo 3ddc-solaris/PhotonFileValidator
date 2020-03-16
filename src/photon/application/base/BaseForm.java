@@ -24,6 +24,8 @@
 
 package photon.application.base;
 
+import photon.application.extensions.prusasl1.printhost.PrusaSL1Server;
+import photon.application.extensions.prusasl1.dialogs.SettingsDialog;
 import photon.application.render.OnionPanel;
 import photon.application.MainForm;
 import photon.application.dialogs.*;
@@ -55,7 +57,7 @@ import java.util.Properties;
 /**
  * by bn on 09/07/2018.
  */
-public class BaseForm {
+public class BaseForm implements PrusaSL1Server.EventListener {
     public JFrame frame;
     protected MainForm me;
 
@@ -72,20 +74,25 @@ public class BaseForm {
         d.setFilenameFilter(new FilenameFilter() {
             @Override
             public boolean accept(File file, String s) {
-                return s.contains(".photon") || s.contains(".cbddlp") || s.contains(".photons");
+                return s.contains(".photon") || s.contains(".cbddlp") || s.contains(".photons") || s.contains(".sl1");
             }
         });
         d.setVisible(true);
         String fileName = d.getDirectory() + d.getFile();
         if (fileName != null && fileName.length() > 0) {
-            File file = new File(fileName);
-            if (MainUtils.isPhotonFile(file)) {
-                if (calcWorker!=null) {
-                    if (!calcWorker.isDone()) {
-                        calcWorker.cancel(true);
-                    }
-                    calcWorker = null;
+            onNewFile(new File(fileName));
+        }
+    }
+
+    @Override
+    public void onNewFile(final File file) {
+        if (MainUtils.isPhotonFile(file)) {
+            if (calcWorker!=null) {
+                if (!calcWorker.isDone()) {
+                    calcWorker.cancel(true);
                 }
+                calcWorker = null;
+            }
 
                 me.saveBtn.setEnabled(false);
                 me.informationBtn.setEnabled(false);
@@ -100,13 +107,12 @@ public class BaseForm {
                     PhotonLoadWorker loadWorker = new PhotonLoadWorker(me, file);
                     loadWorker.execute();
 
-                } catch (Exception ex) {
-                    System.out.println(ex.getMessage());
-                }
-                me.frame.setTitle(file.getName());
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                System.out.println(ex.getMessage());
             }
+            me.frame.setTitle(file.getName());
         }
-
     }
 
     protected void showSave() {
@@ -151,6 +157,17 @@ public class BaseForm {
         me.convertDialog.setSize(new Dimension(650, 430));
         me.convertDialog.setLocationRelativeTo(me.frame);
         me.convertDialog.setVisible(true);
+
+    }
+
+    protected void showSettings() {
+        if (me.settingsDialog == null) {
+            me.settingsDialog = new SettingsDialog();
+        }
+        me.settingsDialog.setInformation();
+        me.settingsDialog.setSize(me.settingsDialog.getPreferredSize());
+        me.settingsDialog.setLocationRelativeTo(me.frame);
+        me.settingsDialog.setVisible(true);
 
     }
 

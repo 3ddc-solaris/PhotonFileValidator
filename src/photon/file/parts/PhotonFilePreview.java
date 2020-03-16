@@ -24,7 +24,10 @@
 
 package photon.file.parts;
 
+import photon.application.extensions.prusasl1.file.utilites.RenderedImage;
+
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
 /**
@@ -60,6 +63,40 @@ public class PhotonFilePreview {
 
         rawImageData = Arrays.copyOfRange(file, imageAddress, imageAddress + dataSize);
 
+        decodeImageData();
+    }
+
+    public PhotonFilePreview(int resolutionX, int resolutionY) throws Exception {
+        this.resolutionX = resolutionX;
+        this.resolutionY = resolutionY;
+        imageAddress = 0;
+        dataSize = resolutionX * resolutionY * 2;
+        p1 = 0;
+        p2 = 0;
+        p3 = 0;
+        p4 = 0;
+
+        rawImageData = new byte[dataSize];
+
+        decodeImageData();
+    }
+
+    public PhotonFilePreview(final RenderedImage image) throws Exception {
+        this.resolutionX = image.getWidth();
+        this.resolutionY = image.getHeight();
+        imageAddress = 0;
+        dataSize = 0;
+        p1 = 0;
+        p2 = 0;
+        p3 = 0;
+        p4 = 0;
+
+        // encode image data
+        imageData = image.getImageData();
+        encodeImageData();
+
+        // re-decode image. verification only. not realy needed.
+        imageData = null;
         decodeImageData();
     }
 
@@ -122,4 +159,65 @@ public class PhotonFilePreview {
         imageData = null;
     }
 
+    private void encodeImageData() {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        int repeat = 0;
+        int lastdot = 0;
+
+        for(int i = 0; i < imageData.length; i++) {
+            final int pixel = imageData[i];
+
+            // read components
+            int red = (pixel >> 16) & 0xFF;
+            int green = (pixel >> 8) & 0xFF;
+            int blue = pixel & 0xFF;
+
+            // reduce to 5 bit color
+            red =  map(red, 0, 0xFF, 0, 0x1F) & 0x1F;
+            green = map(green, 0, 0xFF, 0, 0x1F) & 0x1F;
+            blue = map(blue, 0, 0xFF, 0, 0x1F) & 0x1F;
+
+            // compose dot
+            int dot = (red << 11) | (green << 6) | blue;
+
+            if(0 == i) {
+                // write first single pixel
+                write(out, dot);
+                lastdot = dot;
+                continue;
+            }
+
+            if(dot == lastdot && repeat < 0xFFE) {
+                repeat++;
+                continue;
+            }
+
+            if(repeat > 0) {
+                write(out, lastdot | 0x0020);
+                write(out, repeat);
+            }
+            else {
+                write(out, lastdot);
+            }
+
+            lastdot = dot;
+            repeat = 0;
+        }
+
+        rawImageData = out.toByteArray();
+        dataSize = rawImageData.length;
+    }
+
+    private int map(int x, int in_min, int in_max, int out_min, int out_max)  {
+        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    }
+
+    private void write(final ByteArrayOutputStream out, final int bytes) {
+        // write low byte
+        out.write( (byte) bytes );
+
+        // write high byte
+        out.write( (byte) (bytes >> 8)  );
+    }
 }

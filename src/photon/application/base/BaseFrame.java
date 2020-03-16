@@ -29,6 +29,7 @@ import photon.application.MainForm;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.AWTEventListener;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
 /**
@@ -58,5 +59,34 @@ public class BaseFrame extends JFrame implements AWTEventListener {
     public void setMainForm(MainForm mainForm) {
         baseForm = mainForm;
         mainForm.frame = this;
+    }
+
+    public void bringToFront() {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                if (!isVisible())
+                    setVisible(true);
+                setExtendedState(JFrame.NORMAL);
+                toFront();
+                setAlwaysOnTop(true);
+                try {
+                    final Point oldMouseLocation = MouseInfo.getPointerInfo().getLocation();
+
+                    // simulate a mouse click on title bar of window
+                    Robot robot = new Robot();
+                    robot.mouseMove(getX() + 100, getY() + 10);
+                    robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+                    robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+
+                    // move mouse to old location
+                    robot.mouseMove((int) oldMouseLocation.getX(), (int) oldMouseLocation.getY());
+                }
+                catch (Exception ex) {}
+                finally {
+                    setAlwaysOnTop(false);
+                }
+            }
+        });
     }
 }

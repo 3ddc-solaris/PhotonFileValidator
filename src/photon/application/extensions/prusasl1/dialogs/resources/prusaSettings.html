@@ -1,0 +1,43 @@
+<html>
+<head>
+    <style>
+        .warning {
+            color: red;
+        }
+
+        .note {
+            color: gray;
+            font-size: medium;
+        }
+
+        ul {
+            list-style-type: decimal;
+        }
+
+        li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<h3>To achieve optimum results, the following settings should be made in PrusaSlicer:</h3>
+
+<div class="note">Please note that the manual applies to PrusaSlicer version 2.2.0. The procedure for other versions may differ.</div>
+
+<ul>
+    <li>Go to tab "Printer Settings".</li>
+    <li>Select the built-in Prusa SL1 printer profile.</li>
+    <li>Switch the view to expert mode (red button in the upper right corner).</li>
+    <li>In the section "Corrections" set the field "Printer gamma correction" to <b>0</b>.
+        <div class="note">This disables anti-aliasing in PrusaSlicer, as the anti-aliasing settings cannot be applied at the moment.
+            However, this is not a limitation, since the built-in calculation in the PhotonFileValidator offers much finer control of the anti-aliasing settings.</div>
+    </li>
+    <li>(Optional) In the section "Print Host upload" set the field "Hostname, IP or URL" to <b>{URL}</b>
+        <div class="note">This setting allows you to send the file to PhotonFileValidator with one click after slicing without having to save and reopen it.</div>
+        <div class="warning">{WARNING}</div>
+    </li>
+    <li>Save the profile under a new name, for example "Anycubic Photon".</li>
+</ul>
+</body>
+</html>
