@@ -84,7 +84,6 @@ public class PhotonFilePreview {
     public PhotonFilePreview(final RenderedImage image) throws Exception {
         this.resolutionX = image.getWidth();
         this.resolutionY = image.getHeight();
-        imageAddress = 0;
         dataSize = 0;
         p1 = 0;
         p2 = 0;
@@ -139,7 +138,6 @@ public class PhotonFilePreview {
                 repeat--;
             }
         }
-
     }
 
     public int getResolutionX() {
@@ -162,9 +160,6 @@ public class PhotonFilePreview {
     private void encodeImageData() {
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-        int repeat = 0;
-        int lastdot = 0;
-
         for(int i = 0; i < imageData.length; i++) {
             final int pixel = imageData[i];
 
@@ -179,30 +174,9 @@ public class PhotonFilePreview {
             blue = map(blue, 0, 0xFF, 0, 0x1F) & 0x1F;
 
             // compose dot
-            int dot = (red << 11) | (green << 6) | blue;
+            int dot = ((red << 11) | (green << 6) | blue) & 0xFFDF;
 
-            if(0 == i) {
-                // write first single pixel
-                write(out, dot);
-                lastdot = dot;
-                continue;
-            }
-
-            if(dot == lastdot && repeat < 0xFFE) {
-                repeat++;
-                continue;
-            }
-
-            if(repeat > 0) {
-                write(out, lastdot | 0x0020);
-                write(out, repeat);
-            }
-            else {
-                write(out, lastdot);
-            }
-
-            lastdot = dot;
-            repeat = 0;
+            write(out, dot );
         }
 
         rawImageData = out.toByteArray();
